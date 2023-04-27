@@ -1,6 +1,7 @@
 install.packages('zoo')
 install.packages('tseries')
 install.packages('fUnitRoots')
+
 require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 require(tseries) #diverses fonctions sur les series temporelles
 require(fUnitRoots)
@@ -8,11 +9,11 @@ require(fUnitRoots)
 ###### Partie 1 : Les donnees ######
 
 #Extraction des donnees : 
-path <- "C:/Users/charl/Documents/ENSAE/S2/Séries temporelles" 
+path <- "C:\Users\berti\Documents\ENSAE - 2A\Time series" 
 setwd(path) 
 
 #Mise en forme : 
-datafile <- "huiles.csv" 
+datafile <- "patates.csv" 
 data <- read.csv(datafile,sep=";")
 
 xm <- zoo(data[[2]]) #convertit le premier element de data en serie temporelle de type "zoo"
@@ -31,7 +32,7 @@ axis(side=1,at=seq(1990,2022,2))
 
 #lag.plot(xm,lags=12,layout=c(3,4),do.lines = FALSE )
 #graphique qui montre les corrÃ©lations entre la sÃ©rie xm et 
-#sa propre version dÃ©calÃ©e (lagged version) jusqu'Ã  un maximum de 12 dÃ©calages, 
+#sa propre version dÃ©calÃ©e (lagged version) jusqu'Ã  un maximum de 12 dÃ©calages, 
 #disposÃ©s en une grille de 3 lignes et 4 colonnes, sans afficher les lignes de corrÃ©lation.
 
 
@@ -47,7 +48,7 @@ adf.test(xm)
 # On ne rejette pas H0 
 
 #testKPSS
-kpss.test(xm,null="Trend") #on rejette H0 (H0: la sÃ©rie est stationnaire) Ã  5% et 10%
+kpss.test(xm,null="Trend") #on rejette H0 (H0: la sÃ©rie est stationnaire) Ã  5% et 10%
 #la sÃ©rie n'est donc pas stationnaire
 
 
@@ -86,7 +87,7 @@ Qtests <- function(series, k, fitdf=0) {
 }
 #tests de LB pour les ordres 1 a 24
 
-# L’absence d’autocorrelation n’est jamais rejetee `a 95% jusqu’`a 24 retards. Le mod`ele est donc valide
+# L’absence d’autocorrelation n’est jamais rejetee a 95% jusqu’a 24 retards. Le mod`ele est donc valide
 # dans la fonction Qtestes: param?tre num?ro 1: series
 # le test de Ljung-Box ne rejette pas l'absence d'autocorrelation des r?sidus ? l'ordre 6
 # matrice de pvals de k lignes et 1 colonnes: remplie de 1, pour chaque ?l?ment on applique la fonction (if... on met NA, sinon ... quand on sort de la fonction on met return)
@@ -146,39 +147,39 @@ arimafit <- function(estim){
   print(pvals)
 }
 
+y<- xm_centre
+
 estim <- arima(y,c(4,0,1)); arimafit(estim)
-# pas bien ajusté
+#pas bien ajuste
 
 estim <- arima(y,c(3,0,1)); arimafit(estim)
-# Apas bien ajusté
+arma31 <- estim
+#OK 
 
 estim <- arima(y,c(2,0,1)); arimafit(estim)
-# pas bien ajuste 
-
+#pas bien ajusté 
 
 estim <- arima(y,c(1,0,1)); arimafit(estim)
-# bien ajusté et valide : youpi
+#valide et bien ajuste 
 arma11 <- estim
 
 estim <- arima(y,c(0,0,1)); arimafit(estim)
+# bien ajusté et pas valide
+
+estim <- arima(y,c(1,0,0)); arimafit(estim)
 # bien ajuste et pas du tout valide
 
-estim <- arima(y,c(4,0,0)); arimafit(estim)
-# bien ajuste et valide : cool 
-ar4 <- estim
+estim <- arima(y,c(2,0,0)); arimafit(estim)
+# bien ajuste et pas valide
 
 estim <- arima(y,c(3,0,0)); arimafit(estim)
 # bien ajuste et pas valide
 
-estim <- arima(y,c(2,0,0)); arimafit(estim)
-# bien ajuste mais pas valide
+estim <- arima(y,c(4,0,0)); arimafit(estim)
+ar4 <-estim
 
-estim <- arima(y,c(1,0,0)); arimafit(estim)
-# bien ajuste mais pas valide
-
-
-# on a selectionne 3 modeles ar1ma1 et ar4 valides et bien ajustes. On regarde les test BIC et AIC pour selectionner le meilleur modele.
-models <- c("arma11","ar4"); names(models) <- models
+# on a s?lectionn? 3 mod?les ar3, ma2 et ar2ma1 valides et bien ajust?s. On regarde les test BIC et AIC pour s?lectionner le meilleur mod?le.
+models <- c("arma11","ar4","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 #on regarde en 1 AIC et BIC cr??s pour comparer des mod?les; ensuite on regarde le R?
 #Si AIC et BIC s?lectionnent 2 mod?les, ils restent deux mod?les candidats que l'on d?partage par le R?
