@@ -1,3 +1,6 @@
+install.packages('zoo')
+install.packages('tseries')
+install.packages('fUnitRoots')
 require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 require(tseries) #diverses fonctions sur les series temporelles
 require(fUnitRoots)
@@ -174,7 +177,7 @@ estim <- arima(y,c(1,0,0)); arimafit(estim)
 # bien ajuste mais pas valide
 
 
-# on a s?lectionn? 3 mod?les ar3, ma2 et ar2ma1 valides et bien ajust?s. On regarde les test BIC et AIC pour s?lectionner le meilleur mod?le.
+# on a selectionne 3 modeles ar1ma1 et ar4 valides et bien ajustes. On regarde les test BIC et AIC pour selectionner le meilleur modele.
 models <- c("arma11","ar4"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 #on regarde en 1 AIC et BIC cr??s pour comparer des mod?les; ensuite on regarde le R?
