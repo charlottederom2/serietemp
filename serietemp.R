@@ -10,6 +10,7 @@ install.packages('Hmisc')
 install.packages('lmtest')
 install.packages('margins')
 install.packages('psych')
+install.packages('forecast')
 require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 require(tseries) #diverses fonctions sur les series temporelles
 require(fUnitRoots)
@@ -37,7 +38,7 @@ setwd(path)
 
 #Mise en forme : 
 datafile <- "serietemp/patates.csv"
-data <- read.csv(datafile,sep=";")
+data <- read.csv('patates.csv',sep=";")
 data<- as.data.frame(data)
 
 
@@ -72,11 +73,11 @@ kpss.test(s,null="Trend")
 
 
 # Philippe perron
-pp.test(xm) 
+pp.test(s) 
 #pp test sur la serie (cas general : avec constante et tendance)
 
 # dickey fuller
-adf.test(xm)
+adf.test(s)
 # On ne rejette pas H0 
 
 # test KPSS
@@ -98,24 +99,30 @@ Qtests<-function(series,k,fitdf=0){
   return(t(pvals))}
 
 #test de stationnarité H0: n'est pas stationnaire H1: statio
-adf.test(xm_diff)
-pp.test(xm_diff)
-kpss.test(xm_diff,null="Trend")
+adf.test(s_diff)
+pp.test(s_diff)
+kpss.test(s_diff,null="Trend") 
 
 #Enlever la moyenne
-#xm_centre <- xm_diff - mean(xm_diff)
+s_centre <- s_diff - mean(s_diff)
 
 plot(cbind(s,s_diff),main="Representation des deux series")
 
+acf(as.numeric(s_centre) , main="ACF de s_diff")
+pacf(as.numeric(s_centre), main = "PACF de s_diff")
+
 
 par(mfrow = c(1,2))
-acf(xm_centre,24);pacf(xm_centre,24)
+
+acf(s_centre,24);
+acf(s_centre)
+pacf(s_centre,24)
 
 # statio centré donc on peut mettre ARMA
 # ARMA d'ordres 4,1 à vérifier 
 
 
-#Partie 2 : Modèles ARMA
+###### Partie 2 : Modèles ARMA #######
 
 
 # On vérifie avec le test de JungBox
@@ -165,7 +172,7 @@ arimafit <- function(estim){
 }
 
 
-#### Q6 ####
+#### Q4 ####
 #on cr?e une fonction pour automatiser le calcul de ratios
 #fonction de test des significations individuelles des coefficients
 #on r?cup?re les coeffs
@@ -191,7 +198,7 @@ arimafit <- function(estim){
   print(pvals)
 }
 
-y<- xm_centre
+y<- s_centre
 
 estim <- arima(y,c(4,0,1)); arimafit(estim)
 #pas bien ajuste
@@ -225,25 +232,25 @@ ar4 <-estim
 # on a s?lectionn? 3 mod?les ar3, ma2 et ar2ma1 valides et bien ajust?s. On regarde les test BIC et AIC pour s?lectionner le meilleur mod?le.
 models <- c("arma11","ar4","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
-#on regarde en 1 AIC et BIC cr??s pour comparer des mod?les; ensuite on regarde le R?
-#Si AIC et BIC s?lectionnent 2 mod?les, ils restent deux mod?les candidats que l'on d?partage par le R?
+#on regarde en 1 AIC et BIC cr??s pour comparer des modeles; ensuite on regarde le R
+#Si AIC et BIC selectionnent 2 modeles, ils restent deux modeles candidats que l'on departage par le R
 
-#on prend le ma2 car plus petits AIC et BIC. on regarde ensuite R? pour confirmer notre intuition
+#on prend le arma11 car plus petits AIC et BIC. on regarde ensuite R pour confirmer notre intuition
 
-#une fois que l'on a le mod?le, on continue vace le meilleur mod?le. Ici on garde les autres candidats pour la p?dagogie
+#une fois que l'on a le modele, on continue vace le meilleur modele. Ici on garde les autres candidats pour la pedagogie
 
 #### Q7 ####
 
-##cr?ation de s?ries o? ? chaque colonne sera assign?e la pr?diction par un mod?le
-models <-  c("ar3","ma2","ar2ma1") #c vecteur
-preds <- zoo(matrix(NA,ncol=3,nrow=4),order.by=tail(index(xm.source),4)) #4lignes car on pr?voit sur 4 horizons
+##creation de series o? ? chaque colonne sera assignee la prediction par un modele
+models <-  c("arma11","ar4","arma31") #c vecteur
+preds <- zoo(matrix(NA,ncol=3,nrow=4),order.by=tail(index(s_centre),4)) #4lignes car on prevoit sur 4 horizons
 colnames(preds) <- models #on met les noms des mod?les: 1er nom de colonne: ar3, 2?me nom de col ma2
 desaisonp <- preds #on met une s?rie vierge dans laquelle on stockera les pr?visions
 xmp <- preds #
 
 ##
 for (m in models){
-  pred1 <- mean(desaison) + zoo(predict(get(m),4)$pred, order.by=tail(index(xm.source),4)) #dans pred 1 on met la valeur, 
+  pred1 <- mean(s) + zoo(predict(get(m),4)$pred, order.by=tail(index(xm.source),4)) #dans pred 1 on met la valeur, 
   pred2 <- as.numeric(tail(xm,12))[1:4] + pred1 
   desaisonp[,m] <- pred1
   xmp[,m] <- pred2
@@ -321,9 +328,10 @@ names(pqs) <- paste0("arma(",selec[,1],",",selec[,2],")") #renomme les elements 
 models <- lapply(pqs, function(pq) arima(r,c(pq[["p"]],0,pq[["q"]]))) #cree une liste des modeles candidats estimes
 vapply(models, FUN.VALUE=numeric(2), function(m) c("AIC"=AIC(m),"BIC"=BIC(m))) #calcule les AIC et BIC des modeles candidats
 ### L'ARMA(?,?) minimise les criteres d'information.
+sm <- s[1:(n-4)]
 
 rps <- lapply(models, function(m) as.zoo(predict(m,4)$pred)) #previsions de r
 xmps <- lapply(rps, function(rp) rp+cbind(1,c((T-3):T))%*%lt$coefficients) #previsions de xm
-rmse <- vapply(xmps, FUN.VALUE=numeric(1), function(xmp) sqrt(sum((as.zoo(xmp)-tail(xm.source,4))^2))) #calcule les rmse out-of-sample
+rmse <- vapply(xmps, FUN.VALUE=numeric(1), function(xmp) sqrt(sum((as.zoo(xmp)-tail(s,4))^2))) #calcule les rmse out-of-sample
 rmse
 ### L'ARMA(?,?) fait aussi la meilleure prevision
