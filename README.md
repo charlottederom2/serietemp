@@ -1,2 +1,2 @@
 # serietemp
-Projet d'étude d'une série temporelle, ici l'indice de fabrication d'huiles et graisses végétales et animales
+Projet d'étude d'une série temporelle, ici l'indice de production de produits et de conserves à base de pommes de terres.
