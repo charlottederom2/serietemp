@@ -1,60 +1,101 @@
 install.packages('zoo')
 install.packages('tseries')
 install.packages('fUnitRoots')
-
+install.packages('questionr')
+install.packages('corrplot')
+install.packages('readr')
+install.packages('tidyverse')
+install.packages('dplyr')
+install.packages('Hmisc')
+install.packages('lmtest')
+install.packages('margins')
+install.packages('psych')
 require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 require(tseries) #diverses fonctions sur les series temporelles
 require(fUnitRoots)
+require(forecast)
+require(car)
+require(readr)
+require(questionr)
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(questionr)
+library(corrplot)
+library(Hmisc)
+library(lmtest)
+library(margins)
+library(psych)
+
 
 ###### Partie 1 : Les donnees ######
 
 #Extraction des donnees : 
-path <- "C:\Users\berti\Documents\ENSAE - 2A\Time series" 
+path <- "C:/Users/berti/Documents/ENSAE - 2A/Time series" 
 setwd(path) 
 
+
 #Mise en forme : 
-datafile <- "patates.csv" 
+datafile <- "serietemp/patates.csv"
 data <- read.csv(datafile,sep=";")
-
-xm <- zoo(data[[2]]) #convertit le premier element de data en serie temporelle de type "zoo"
-T <- length(xm)
-
-#xm <- xm.source[1:(T-4)] #supprime les 4 dernieres valeurs
-#class <- class(data$indice)
-#head(xm, n=10)
-
-# Q1 : Representation de la serie 
-
-plot(xm, xaxt="s") 
-axis(side=1,at=seq(1990,2022,2)) 
-
-#acf(xm) #on retire peut etre après 
-
-#lag.plot(xm,lags=12,layout=c(3,4),do.lines = FALSE )
-#graphique qui montre les corrÃ©lations entre la sÃ©rie xm et 
-#sa propre version dÃ©calÃ©e (lagged version) jusqu'Ã  un maximum de 12 dÃ©calages, 
-#disposÃ©s en une grille de 3 lignes et 4 colonnes, sans afficher les lignes de corrÃ©lation.
+data<- as.data.frame(data)
 
 
-#la tendance
-summary(lm(xm~seq(1,n)))
+donnees <- apply(data, 2,rev )
+rownames(donnees)<- 1:dim(donnees)[1]
 
-## test de stationnarité
-# Philippe peron
-pp.test(xm) #pp test sur la série (cas g´en´eral : avec constante et tendance)
+
+### Q1 : Representation de la serie 
+
+s<- ts(as.numeric(donnees[,2]),start=2006,frequency=12)
+n<- length(s)
+plot(s,xlab="Dates",ylab="Indice de production industrielle",main="Indice de production industrielle de preparations à base de pommes de terre")
+title(xlab="Dates")
+
+#monthplot(s)
+
+acf(s)
+pacf(s)
+
+fit1<-decompose(s)
+plot(fit1)
+
+summary(lm(s~seq(1,n)))
+#regression lineaire simple de la serie chronologique s en fonction de sa position temporelle seq(1,n)
+#calcul des coefficients de regression et des statistiques associees a cette relation lineaire
+
+### Tests de stationnarite :
+
+kpss.test(s,null="Trend")
+
+#On verifie l'autocorrelation des residus jusqu'a l'ordre k 
+
+
+# Philippe perron
+pp.test(xm) 
+#pp test sur la serie (cas general : avec constante et tendance)
 
 # dickey fuller
 adf.test(xm)
 # On ne rejette pas H0 
 
-#testKPSS
-kpss.test(xm,null="Trend") #on rejette H0 (H0: la sÃ©rie est stationnaire) Ã  5% et 10%
-#la sÃ©rie n'est donc pas stationnaire
+# test KPSS
+kpss.test(xm,null="Trend") 
+#on rejette H0 (H0: la serie est stationnaire) a  5% et 10%
+#la serie n'est donc pas stationnaire
 
 
 #### Q2 #### Stationnariser la serie
-xm_diff <- diff(xm)
-plot(xm_diff, xaxt="s")
+s_diff <- diff(s)
+plot(s_diff, xaxt="s")
+
+Qtests<-function(series,k,fitdf=0){
+  pvals<-apply(matrix(1:k),1,FUN=function(l)
+  {pval<-
+    if(l<=fitdf)NA 
+  else Box.test(series,lag=l,type="Ljung-Box",fitdf=fitdf)$p.value
+  return(c("lag"=l,"pval"=pval))})
+  return(t(pvals))}
 
 #test de stationnarité H0: n'est pas stationnaire H1: statio
 adf.test(xm_diff)
@@ -62,12 +103,15 @@ pp.test(xm_diff)
 kpss.test(xm_diff,null="Trend")
 
 #Enlever la moyenne
-xm_centre <- xm_diff - mean(xm_diff)
+#xm_centre <- xm_diff - mean(xm_diff)
 
-# statio centré donc on peut mettre ARMA
+plot(cbind(s,s_diff),main="Representation des deux series")
+
+
 par(mfrow = c(1,2))
 acf(xm_centre,24);pacf(xm_centre,24)
 
+# statio centré donc on peut mettre ARMA
 # ARMA d'ordres 4,1 à vérifier 
 
 
