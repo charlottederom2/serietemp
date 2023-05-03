@@ -42,18 +42,14 @@ data <- read.csv('patates.csv',sep=";")
 data<- as.data.frame(data)
 
 
-donnees <- apply(data, 2,rev )
-rownames(donnees)<- 1:dim(donnees)[1]
-
-
 ### Q1 : Representation de la serie 
 
-s<- ts(as.numeric(donnees[,2]),start=2006,frequency=12)
+s<- ts(as.numeric(data[,2]),start=2006,frequency=12)
 n<- length(s)
 plot(s,xlab="Dates",ylab="Indice de production industrielle",main="Indice de production industrielle de preparations à base de pommes de terre")
 title(xlab="Dates")
 
-#monthplot(s)
+monthplot(s)
 
 acf(s)
 pacf(s)
@@ -103,19 +99,19 @@ adf.test(s_diff)
 pp.test(s_diff)
 kpss.test(s_diff,null="Trend") 
 
-#Enlever la moyenne
-s_centre <- s_diff - mean(s_diff)
+#Enlever la moyenne ???
+#s_centre <- s_diff - mean(s_diff)
 
+#représentation des deux séries
 plot(cbind(s,s_diff),main="Representation des deux series")
 
-acf(as.numeric(s_centre) , main="ACF de s_diff")
-pacf(as.numeric(s_centre), main = "PACF de s_diff")
-
+acf(as.numeric(s_diff) , main="ACF de s_diff")
+pacf(as.numeric(s_diff), main = "PACF de s_diff")
+#les ordres maximaux sont p*=4 et q* = 1
 
 par(mfrow = c(1,2))
 
 acf(s_centre,24);
-acf(s_centre)
 pacf(s_centre,24)
 
 # statio centré donc on peut mettre ARMA
@@ -125,7 +121,7 @@ pacf(s_centre,24)
 ###### Partie 2 : Modèles ARMA #######
 
 
-# On vérifie avec le test de JungBox
+# On vérifie avec le test de LjungBox
 
 # Validation du modèle
 
@@ -138,23 +134,23 @@ Qtests <- function(series, k, fitdf=0) {
 }
 #tests de LB pour les ordres 1 a 24
 
-# L’absence d’autocorrelation n’est jamais rejetee a 95% jusqu’a 24 retards. Le mod`ele est donc valide
-# dans la fonction Qtestes: param?tre num?ro 1: series
-# le test de Ljung-Box ne rejette pas l'absence d'autocorrelation des r?sidus ? l'ordre 6
-# matrice de pvals de k lignes et 1 colonnes: remplie de 1, pour chaque ?l?ment on applique la fonction (if... on met NA, sinon ... quand on sort de la fonction on met return)
-#on trouve que pour 1 ? 5: NA: le k est plus petit 
-#dans ce cas on veut accepter H0 (r?sidus non corr?l?s) donc on veut des p-valeurs ?lev?es: on est ravis ici
+# L’absence d’autocorrelation n’est jamais rejetee a 95% jusqu’a 24 retards. Le modele est donc valide.
+# dans la fonction Qtestes: parametre numero 1: series
+# le test de Ljung-Box ne rejette pas l'absence d'autocorrelation des residus a l'ordre 6
+# matrice de pvals de k lignes et 1 colonnes: remplie de 1, pour chaque element on applique la fonction (if... on met NA, sinon ... quand on sort de la fonction on met return)
+#on trouve que pour 1 a 5: NA: le k est plus petit 
+#dans ce cas on veut accepter H0 (residus non correles) donc on veut des p-valeurs elevees: on est ravis ici
 
 
 
-#les coeff de l'ar3, on fait le ratio de 0.1748/0.1604 = 1.08 < 1.96 --> coef non significatif, on peut simplifier le mod?le
-#On teste tous les mod?les pour trouver les mod?les bien ajust?s et valides, on les compare tous 
+#les coeff de l'ar3, on fait le ratio de 0.1748/0.1604 = 1.08 < 1.96 --> coef non significatif, on peut simplifier le modele
+#On teste tous les modeles pour trouver les modeles bien ajustes et valides, on les compare tous 
 
 
 
 summary(lm(spread ~ dates))
-#on fait une regression : les p-valeurs sont tres faibles, coef significatif au seuil de 1% (on le sait aussi car il y a 3 ?toiles)
-#onfait le test de DF avec c et t : comme les deux coeff sont significatifs au seuil de 1% il sont non nuls donc on les inclus. 
+#on fait une regression : les p-valeurs sont tres faibles, coef significatif au seuil de 1% (on le sait aussi car il y a 3 etoiles)
+#on fait le test de DF avec c et t : comme les deux coeff sont significatifs au seuil de 1% il sont non nuls donc on les inclus. 
 #deltaXt = c + bt + betaX(t-1) + somme(1?k) Phi(l)DeltaXt-l + Epsilon
 
 #install.packages("fUnitRoots")#tests de racine unitaire plus modulables
@@ -229,7 +225,7 @@ estim <- arima(y,c(3,0,0)); arimafit(estim)
 estim <- arima(y,c(4,0,0)); arimafit(estim)
 ar4 <-estim
 
-# on a s?lectionn? 3 mod?les ar3, ma2 et ar2ma1 valides et bien ajust?s. On regarde les test BIC et AIC pour s?lectionner le meilleur mod?le.
+# on a selectionne 3 modeles ar3, ma2 et arma21 valides et bien ajustes. On regarde les tests BIC et AIC pour selectionner le meilleur modele.
 models <- c("arma11","ar4","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 #on regarde en 1 AIC et BIC cr??s pour comparer des modeles; ensuite on regarde le R
