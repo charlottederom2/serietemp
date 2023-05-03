@@ -39,45 +39,50 @@ setwd(path)
 #Mise en forme : 
 datafile <- "serietemp/patates.csv"
 data <- read.csv('patates.csv',sep=";")
-data<- as.data.frame(data)
+#data<- as.data.frame(data)
 
 
 ### Q1 : Representation de la serie 
+dates_char <- as.character(data$dates)
+dates_char[1];dates_char[length(dates_char)] #affiche la premi`ere et la derni`ere date
+dates <- as.yearmon(seq(from=2006+3/12,to=2023+1/12,by=1/12)) #index des dates pour spread
+serie <- zoo(data$spread,order.by=dates)
+serie_diff <- diff(spread,1) #diff´erence premi`ere
+plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
-s<- ts(as.numeric(data[,2]),start=2006,frequency=12)
-n<- length(s)
-plot(s,xlab="Dates",ylab="Indice de production industrielle",main="Indice de production industrielle de preparations à base de pommes de terre")
-title(xlab="Dates")
+plot(cbind(serie,serie_diff))
 
-monthplot(s)
-
-acf(s)
-pacf(s)
-
-fit1<-decompose(s)
-plot(fit1)
-
-summary(lm(s~seq(1,n)))
+summary(lm(serie~dates))
 #regression lineaire simple de la serie chronologique s en fonction de sa position temporelle seq(1,n)
 #calcul des coefficients de regression et des statistiques associees a cette relation lineaire
 
+monthplot(serie)
+
+acf(serie)
+pacf(serie)
+
+fit1<-decompose(serie)
+plot(fit1)
+
+
+
 ### Tests de stationnarite :
 
-kpss.test(s,null="Trend")
+kpss.test(spread,null="Trend")
 
 #On verifie l'autocorrelation des residus jusqu'a l'ordre k 
 
 
 # Philippe perron
-pp.test(s) 
+pp.test(spread) 
 #pp test sur la serie (cas general : avec constante et tendance)
 
 # dickey fuller
-adf.test(s)
+adf.test(spread)
 # On ne rejette pas H0 
 
 # test KPSS
-kpss.test(xm,null="Trend") 
+kpss.test(spread,null="Trend") 
 #on rejette H0 (H0: la serie est stationnaire) a  5% et 10%
 #la serie n'est donc pas stationnaire
 
