@@ -91,6 +91,7 @@ kpss.test(spread,null="Trend")
 s_diff <- diff(s)
 plot(s_diff, xaxt="s")
 
+
 Qtests<-function(series,k,fitdf=0){
   pvals<-apply(matrix(1:k),1,FUN=function(l)
   {pval<-
@@ -104,8 +105,8 @@ adf.test(s_diff)
 pp.test(s_diff)
 kpss.test(s_diff,null="Trend") 
 
-#Enlever la moyenne ???
-#s_centre <- s_diff - mean(s_diff)
+#Enlever la moyenne
+s_centre <- s_diff - mean(s_diff)
 
 #représentation des deux séries
 plot(cbind(s,s_diff),main="Representation des deux series")
@@ -208,10 +209,12 @@ estim <- arima(y,c(3,0,1)); arimafit(estim)
 arma31 <- estim
 #OK 
 
-estim <- arima(y,c(2,0,1)); arimafit(estim)
+estim <- arima(y,c(2,0,1)); 
+arimafit(estim)
 #pas bien ajusté 
 
-estim <- arima(y,c(1,0,1)); arimafit(estim)
+estim <- arima(y,c(1,0,1)); 
+arimafit(estim)
 #valide et bien ajuste 
 arma11 <- estim
 
@@ -238,101 +241,29 @@ apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 
 #on prend le arma11 car plus petits AIC et BIC. on regarde ensuite R pour confirmer notre intuition
 
-#une fois que l'on a le modele, on continue vace le meilleur modele. Ici on garde les autres candidats pour la pedagogie
 
-#### Q7 ####
+##### Partie3:Previsions #####
 
-##creation de series o? ? chaque colonne sera assignee la prediction par un modele
-models <-  c("arma11","ar4","arma31") #c vecteur
-preds <- zoo(matrix(NA,ncol=3,nrow=4),order.by=tail(index(s_centre),4)) #4lignes car on prevoit sur 4 horizons
-colnames(preds) <- models #on met les noms des mod?les: 1er nom de colonne: ar3, 2?me nom de col ma2
-desaisonp <- preds #on met une s?rie vierge dans laquelle on stockera les pr?visions
-xmp <- preds #
+#### Question 6
 
-##
-for (m in models){
-  pred1 <- mean(s) + zoo(predict(get(m),4)$pred, order.by=tail(index(xm.source),4)) #dans pred 1 on met la valeur, 
-  pred2 <- as.numeric(tail(xm,12))[1:4] + pred1 
-  desaisonp[,m] <- pred1
-  xmp[,m] <- pred2
-}
+tsdiag(arma11)
+qqnorm(arma11$residuals)
 
-obs <- tail(xm.source,4) #
-cbind(obs,xmp) #
-apply(xmp,2, function(x) sqrt(sum((x-obs)^2)/4)/sd(xm.source)) 
-# le ma2 est le plus proche du nb d'observations
-#on voit que le arma21 performe le mieux car avec la plus petite mean square erreur (une sorte de R? non ajust?)
+#jarque.bera.test(arima11$residuals)
+plot(density(arma11$residuals,lwd=0.5),xlim=c(-10,10),main="Densite des residus",xlab="Valeurs",ylab="Densite")
 
-#### Q8 ####
-datafile <- "Donnees2.csv" #definit le fichier de donnees
+mu<-mean(arma11$residuals)
+sigma<-sd(arma11$residuals)
+x<-seq(-10,10)
+y<-dnorm(x,mu,sigma)
+lines(x,y,lwd=0.5,col="blue")
 
-data <- read.csv(datafile,sep=";") #importe un fichier .csv dans un objet de classe data.frame
-xm.source <- zoo(data[[1]]) #convertit le premier element de data en serie temporelle de type "zoo"
-T <- length(xm.source)
-xm <- xm.source[1:(T-4)] #supprime les 4 dernieres valeurs
-dev.off() #reinitialise les parametre de graphique
-plot(xm)
-### 
+#Extraction des coefs du modele et de la variance des residus
+arma11$coef
+phi_1<-as.numeric(arma11$coef[1])
+phi_2<-as.numeric(arma11$coef[2])
+sigma2<-as.numeric(arma11$sigma2)
 
-trend <- 1:length(xm)
-lt <- lm(xm ~ trend) #
-summary(lt) #
-r <- lt$residuals #
-par(mfrow=c(1,2))
-plot(r)
-acf(r)
-### 
-
-pp.test(xm) 
-### 
-
-acf(r,24);pacf(r,24) 
-### 
-### 
-pmax=4; qmax=21
-
-### 
-
-
-
-## fonction pour estimer un arima et en verifier l'ajustement et la validite
-modelchoice <- function(p,q,data=r, k=24){
-  estim <- try(arima(data, c(p,0,q),optim.control=list(maxit=20000)))
-  if (class(estim)=="try-error") return(c("p"=p,"q"=q,"arsignif"=NA,"masignif"=NA,"resnocorr"=NA, "ok"=NA))
-  arsignif <- if (p==0) NA else signif(estim)[3,p]<=0.05
-  masignif <- if (q==0) NA else signif(estim)[3,p+q]<=0.05
-  resnocorr <- sum(Qtests(estim$residuals,24,length(estim$coef)-1)[,2]<=0.05,na.rm=T)==0
-  checks <- c(arsignif,masignif,resnocorr)
-  ok <- as.numeric(sum(checks,na.rm=T)==(3-sum(is.na(checks))))
-  return(c("p"=p,"q"=q,"arsignif"=arsignif,"masignif"=masignif,"resnocorr"=resnocorr,"ok"=ok))
-}
-
-## fonction pour estimer et verifier tous les arima(p,q) avec p<=pmax et q<=max
-armamodelchoice <- function(pmax,qmax){
-  pqs <- expand.grid(0:pmax,0:qmax)
-  t(apply(matrix(1:dim(pqs)[1]),1,function(row) {
-    p <- pqs[row,1]; q <- pqs[row,2]
-    cat(paste0("Computing ARMA(",p,",",q,") \n"))
-    modelchoice(p,q)
-  }))
-}
-
-armamodels <- armamodelchoice(pmax,qmax) #estime tous les arima (patienter...)
-
-
-selec <- armamodels[armamodels[,"ok"]==1&!is.na(armamodels[,"ok"]),] #modeles bien ajustes et valides
-selec
-### On a ? modeles bien ajustes et valides
-
-pqs <- apply(selec,1,function(row) list("p"=as.numeric(row[1]),"q"=as.numeric(row[2]))) #cree une liste des ordres p et q des modeles candidats
-names(pqs) <- paste0("arma(",selec[,1],",",selec[,2],")") #renomme les elements de la liste
-models <- lapply(pqs, function(pq) arima(r,c(pq[["p"]],0,pq[["q"]]))) #cree une liste des modeles candidats estimes
-vapply(models, FUN.VALUE=numeric(2), function(m) c("AIC"=AIC(m),"BIC"=BIC(m))) #calcule les AIC et BIC des modeles candidats
-### L'ARMA(?,?) minimise les criteres d'information.
-sm <- s[1:(n-4)]
-
-rps <- lapply(models, function(m) as.zoo(predict(m,4)$pred)) #previsions de r
-xmps <- lapply(rps, function(rp) rp+cbind(1,c((T-3):T))%*%lt$coefficients) #previsions de xm
-rmse <- vapply(xmps, FUN.VALUE=numeric(1), function(xmp) sqrt(sum((as.zoo(xmp)-tail(s,4))^2))) #calcule les rmse out-of-sample
-rmse
-### L'ARMA(?,?) fait aussi la meilleure prevision
+phi_1
+phi_2
+sigma2
