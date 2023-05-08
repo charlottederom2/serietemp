@@ -47,7 +47,7 @@ dates_char <- as.character(data$dates)
 dates_char[1];dates_char[length(dates_char)] #affiche la premi`ere et la derni`ere date
 dates <- as.yearmon(seq(from=2006+3/12,to=2023+1/12,by=1/12)) #index des dates pour spread
 serie <- zoo(data$spread,order.by=dates)
-serie_diff <- diff(spread,1) #diff´erence premi`ere
+serie_diff <- diff(data$spread,1) #difference premiere
 plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
 plot(cbind(serie,serie_diff))
@@ -88,31 +88,23 @@ kpss.test(spread,null="Trend")
 
 
 #### Q2 #### Stationnariser la serie
-s_diff <- diff(s)
-plot(s_diff, xaxt="s")
+s_diff <- diff(serie)
+plot(s_diff, xaxt="s", type = "l")
 
-
-Qtests<-function(series,k,fitdf=0){
-  pvals<-apply(matrix(1:k),1,FUN=function(l)
-  {pval<-
-    if(l<=fitdf)NA 
-  else Box.test(series,lag=l,type="Ljung-Box",fitdf=fitdf)$p.value
-  return(c("lag"=l,"pval"=pval))})
-  return(t(pvals))}
 
 #test de stationnarité H0: n'est pas stationnaire H1: statio
-adf.test(s_diff)
-pp.test(s_diff)
-kpss.test(s_diff,null="Trend") 
+adf.test(serie_diff) #On rejette H0 sur tous les niveaux de confiance usuels 
+pp.test(serie_diff) #Idem
+kpss.test(serie_diff,null="Trend") #On ne rejette pas H0 (= Est stationnaire)
 
 #Enlever la moyenne
-s_centre <- s_diff - mean(s_diff)
+s_centre <- serie_diff - mean(serie_diff)
 
 #représentation des deux séries
-plot(cbind(s,s_diff),main="Representation des deux series")
+plot(cbind(serie,serie_diff),main="Representation des deux series") #ça je n'arrive pas à plot
 
-acf(as.numeric(s_diff) , main="ACF de s_diff")
-pacf(as.numeric(s_diff), main = "PACF de s_diff")
+acf(as.numeric(serie_diff) , main="ACF de s_diff")
+pacf(as.numeric(serie_diff), main = "PACF de s_diff")
 #les ordres maximaux sont p*=4 et q* = 1
 
 par(mfrow = c(1,2))
@@ -137,7 +129,9 @@ Qtests <- function(series, k, fitdf=0) {
     return(c("lag"=l,"pval"=pval))
   })
   return(t(pvals))
+  
 }
+
 #tests de LB pour les ordres 1 a 24
 
 # L’absence d’autocorrelation n’est jamais rejetee a 95% jusqu’a 24 retards. Le modele est donc valide.
@@ -162,20 +156,11 @@ summary(lm(spread ~ dates))
 #install.packages("fUnitRoots")#tests de racine unitaire plus modulables
 #library(fUnitRoots)
 
-arimafit <- function(estim){
-  adjust <- round(signif(estim),3)
-  pvals <- Qtests(estim$residuals,24,length(estim$coef)-1)
-  pvals <- matrix(apply(matrix(1:24,nrow=6),2,function(c) round(pvals[c,],3)),nrow=6)
-  colnames(pvals) <- rep(c("lag", "pval"),4)
-  cat("tests de nullite des coefficients :\n")
-  print(adjust)
-  cat("\n tests d'absence d'autocorrelation des residus : \n")
-  print(pvals)
-}
+
 
 
 #### Q4 ####
-#on cr?e une fonction pour automatiser le calcul de ratios
+#on cree une fonction pour automatiser le calcul de ratios
 #fonction de test des significations individuelles des coefficients
 #on r?cup?re les coeffs
 #"on r?cup?re les std errors"
@@ -199,6 +184,8 @@ arimafit <- function(estim){
   cat("\n tests d'absence d'autocorrelation des residus : \n")
   print(pvals)
 }
+
+
 
 y<- s_centre
 
