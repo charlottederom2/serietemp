@@ -52,10 +52,6 @@ plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
 plot(cbind(serie,serie_diff))
 
-summary(lm(serie~dates))
-#regression lineaire simple de la serie chronologique s en fonction de sa position temporelle seq(1,n)
-#calcul des coefficients de regression et des statistiques associees a cette relation lineaire
-
 monthplot(serie)
 
 acf(serie)
@@ -64,44 +60,80 @@ pacf(serie)
 fit1<-decompose(serie)
 plot(fit1)
 
+#2 
+
+summary(lm(serie~dates))
+#regression lineaire simple de la serie chronologique s en fonction de sa position temporelle seq(1,n)
+#calcul des coefficients de regression et des statistiques associees a cette relation lineaire
+
 
 
 ### Tests de stationnarite :
 
-kpss.test(spread,null="Trend")
+## dickey fuller
+adf <- adfTest(serie, lag=0, type="ct") #on met le type 'ct' pour avoir un test ADF dans le cas avec constante et tendance
 
 #On verifie l'autocorrelation des residus jusqu'a l'ordre k 
+Qtests <- function(series, k, fitdf=0) {
+  pvals <- apply(matrix(1:k), 1, FUN=function(l) {
+    pval <- if (l<=fitdf) NA else Box.test(series, lag=l, type="Ljung-Box", fitdf=fitdf)$p.value
+    return(c("lag"=l,"pval"=pval))
+  })
+  return(t(pvals))
+}
+
+Qtests(adf@test$lm$residuals24,length(adf@test$lm$coefficients))
+
+adfTest_valid <- function(series,kmax,type){ #tests ADF jusqu’`a des r´esidus non autocorr´el´es
+  k <- 0
+  noautocorr <- 0
+  while (noautocorr==0){
+    cat(paste0("ADF with ",k, " lags: residuals OK? "))
+    adf <- adfTest(series,lags=k,type=type)
+    pvals <- Qtests(adf@test$lm$residuals,24,fitdf=length(adf@test$lm$coefficients))[,2]
+    if (sum(pvals<0.05,na.rm=T) == 0) {
+      noautocorr <- 1; cat("OK \n")}
+    else cat("nope \n")
+    k <- k + 1
+  }
+  return(adf)
+}
+adf <- adfTest_valid(serie,24,"ct")
+adf
+#la racine unitaire est rejetée au seuil de 1%
 
 
-# Philippe perron
-pp.test(spread) 
+## Philippe perron
+pp.test(serie) 
 #pp test sur la serie (cas general : avec constante et tendance)
 
-# dickey fuller
-adf.test(spread)
-# On ne rejette pas H0 
 
-# test KPSS
-kpss.test(spread,null="Trend") 
+## test KPSS
+kpss.test(serie,null="Trend") #prend en compte à la fois une tendance et une constante
 #on rejette H0 (H0: la serie est stationnaire) a  5% et 10%
 #la serie n'est donc pas stationnaire
 
 
 #### Q2 #### Stationnariser la serie
-s_diff <- diff(serie)
-plot(s_diff, xaxt="s", type = "l")
+serie_diff <- diff(serie)
+plot(serie_diff, xaxt="s", type = "l")
 
+summary(lm(serie_diff~dates[-1])) #on enlève la première date car la série est différenciée
+#on trouve a nouveau une série avec tendance et constante non nulles (les deux coefficients sont significatifs)
 
-#test de stationnarité H0: n'est pas stationnaire H1: statio
-adf.test(serie_diff) #On rejette H0 sur tous les niveaux de confiance usuels 
+#test de stationnarité (H0: n'est pas stationnaire ; H1: statio)
+adf <- adfTest_valid(serie_diff,24,"ct")
+adf #On rejette H0 sur tous les niveaux de confiance usuels 
+
 pp.test(serie_diff) #Idem
-kpss.test(serie_diff,null="Trend") #On ne rejette pas H0 (= Est stationnaire)
+kpss.test(serie_diff,null="Trend") 
+#On ne rejette pas H0 (= Est stationnaire)
 
 #Enlever la moyenne
 s_centre <- serie_diff - mean(serie_diff)
 
 #représentation des deux séries
-plot(cbind(serie,serie_diff),main="Representation des deux series") #ça je n'arrive pas à plot
+plot(cbind(serie,serie_diff),main="Representation des deux series") 
 
 acf(as.numeric(serie_diff) , main="ACF de s_diff")
 pacf(as.numeric(serie_diff), main = "PACF de s_diff")
@@ -162,8 +194,8 @@ summary(lm(spread ~ dates))
 #### Q4 ####
 #on cree une fonction pour automatiser le calcul de ratios
 #fonction de test des significations individuelles des coefficients
-#on r?cup?re les coeffs
-#"on r?cup?re les std errors"
+#on recupere les coeffs
+#"on recupere les std errors"
 #"on calcule le ratio"
 signif <- function(estim){ 
   coef <- estim$coef 
