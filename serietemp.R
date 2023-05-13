@@ -37,44 +37,31 @@ rm(list=ls())
 path <- "C:/Users/berti/Documents/ENSAE - 2A/Time series" 
 setwd(path) 
 
-#Mise en forme : 
-datafile <- "serietemp/patates.csv"
-data <- read.csv('patates_bisbis.csv',sep=";")
 
 require(zoo)
 require(tseries)
 library(base)
 require(base)
 
-data.source <- zoo(data[[1]], order.by=data$dates) #convertit le 1er element de data en "zoo"
-T <- length(data.source)
-data <- data.source[1:(length(data.source)-4)] #supprime les 4 dernieres valeurs
-data_df <- data.frame(date = as.Date(index(data.source), format = "%Y-%m"), spread = coredata(data.source))
 
-dates_char <- as.character(data_df$date)
-is.unique(data_df$date)
 
-data_df$date <- as.Date(data_df$date, format="%Y-%m") # changer le format de la date
-data_df_unique <- data_df[!duplicated(data_df$date),]
-data_df_unique$spread <- as.numeric(data_df_unique$spread)
+datafile <- "serietemp/patates.csv"
+data <- read.csv('patates_bisbis.csv',sep=";")
 
-plot(serie, xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice")
+#data <- data.source[1:(T-4)] #supprime les 4 dernieres valeurs
 
-serie_diff <- diff(serie, 1)
 
-plot(cbind(serie, serie_diff), xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice et différences premières")
+#### Q1 : Representation de la serie 
 
-plot(serie, xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice")
-
-serie_diff <- diff(serie, 1)
-plot(cbind(serie, serie_diff), xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice et différences premières")
-
-### Q1 : Representation de la serie 
 dates_char <- as.character(data$dates)
-dates_char[1];dates_char[length(dates_char)] #affiche la premi`ere et la derni`ere date
-dates <- as.yearmon(seq(from=2005+2/12,to=2022+10/12,by=1/12)) #index des dates pour spread
-serie <- zoo(data,order.by=dates)
-serie_diff <- diff(data$spread,1) #difference premiere
+dates_char[1];dates_char[length(dates_char)] #affiche la premiere et la derni`ere date
+dates <- as.yearmon(seq(from=2005+1/12,to=2022+10/12,by=1/12)) #index des dates pour spread
+serie <- zoo(data$spread,order.by=dates)
+T <- length(serie)
+test <- serie[(T-3):T]
+data <- serie[1:(T-4)]
+
+serie_diff <- diff(serie,1) #difference premiere
 plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
 plot(cbind(serie,serie_diff))
@@ -207,7 +194,7 @@ Qtests <- function(series, k, fitdf=0) {
 
 
 
-summary(lm(spread ~ dates))
+summary(lm(serie ~ dates))
 #on fait une regression : les p-valeurs sont tres faibles, coef significatif au seuil de 1% (on le sait aussi car il y a 3 etoiles)
 #on fait le test de DF avec c et t : comme les deux coeff sont significatifs au seuil de 1% il sont non nuls donc on les inclus. 
 #deltaXt = c + bt + betaX(t-1) + somme(1?k) Phi(l)DeltaXt-l + Epsilon
@@ -305,9 +292,9 @@ lines(x,y,lwd=0.5,col="blue")
 ### Question 8 : Traçons la région de confiance pour la serie à 95%
 
 library(forecast)
-fore=forecast(arima111,h=3,level=95)
+fore=forecast(arima111,h=4,level=95)
 par(mfrow=c(1,1))
-plot(fore,col=1,fcol=2,shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(1,1,1) avec une moyenne nulle")
+plot(fore,col=1,fcol=2,xlim=c(2020,2025),shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(1,1,1) avec une moyenne nulle")
 
 #Ensuite,onrepresentelaregiondeconfiancebivarieea95%.require(ellipse)
 
@@ -337,8 +324,9 @@ Sigma<-matrix(c(sigma2,(phi_1+theta_1)*sigma2,(phi_1+theta_1)*sigma2,(1+(phi_1+t
 
 inv_Sigma<-solve(Sigma)
 
+
 par(mar=c(5, 5, 4, 2) + 0.1)
-plot(XT1, XT2, xlim=c(-10,10), ylim=c(-10,10), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
+plot(XT1, XT2, xlim=c(-20,20), ylim=c(-20,20), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
 
 # Calcul des bornes de la region de confiance
 conf <- ellipse(
