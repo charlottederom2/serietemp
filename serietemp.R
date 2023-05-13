@@ -277,7 +277,7 @@ fore=forecast(arima111,h=4,level=95)
 par(mfrow=c(1,1))
 plot(fore,col=1,fcol=2,xlim=c(2020,2025),shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(1,1,1) avec une moyenne nulle")
 
-#Ensuite,onrepresentelaregiondeconfiancebivarieea95%.require(ellipse)
+#Ensuite,on represente laregion de confiance bivariee a 95% .require(ellipse)
 
 XT1=predict(arma11,n.ahead=2)$pred[1]
 XT2=predict(arma11,n.ahead=2)$pred[2]
