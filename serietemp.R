@@ -11,6 +11,8 @@ install.packages('lmtest')
 install.packages('margins')
 install.packages('psych')
 install.packages('forecast')
+install.packages('ellipsis')
+install.packages('ellipse')
 require(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 require(tseries) #diverses fonctions sur les series temporelles
 require(fUnitRoots)
@@ -35,12 +37,11 @@ library(psych)
 path <- "C:/Users/berti/Documents/ENSAE - 2A/Time series" 
 setwd(path) 
 
-
 #Mise en forme : 
 datafile <- "serietemp/patates.csv"
 data <- read.csv('patates.csv',sep=";")
-#data<- as.data.frame(data)
 
+data <- data.source[1:(T-4)] #supprime les 4 derni`eres valeurs
 
 ### Q1 : Representation de la serie 
 dates_char <- as.character(data$dates)
@@ -260,15 +261,13 @@ apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 
 #on prend le arma11 car plus petits AIC et BIC. on regarde ensuite R pour confirmer notre intuition
 
+arima111<-arima(serie,c(1,1,1),include.mean=F)
+arima111
 
 ##### Partie3:Previsions #####
 
 #### Question 6
 
-tsdiag(arma11)
-qqnorm(arma11$residuals)
-
-#jarque.bera.test(arima11$residuals)
 plot(density(arma11$residuals,lwd=0.5),xlim=c(-10,10),main="Densite des residus",xlab="Valeurs",ylab="Densite")
 
 mu<-mean(arma11$residuals)
@@ -277,12 +276,47 @@ x<-seq(-10,10)
 y<-dnorm(x,mu,sigma)
 lines(x,y,lwd=0.5,col="blue")
 
-#Extraction des coefs du modele et de la variance des residus
+### Question 8 : Traçons la région de confiance pour la serie à 95%
+
+library(forecast)
+fore=forecast(arima111,h=3,level=95)
+par(mfrow=c(1,1))
+plot(fore,col=1,fcol=2,shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(1,1,1) avec une moyenne nulle")
+
+#Ensuite,onrepresentelaregiondeconfiancebivarieea95%.require(ellipse)
+
+XT1=predict(arma11,n.ahead=2)$pred[1]
+XT2=predict(arma11,n.ahead=2)$pred[2]
+XT1
+XT2
+
+require(ellipsis)
+require(car)
+require(ellipse)
+library(ellipse)
+arma=arima0(serie_diff,order=c(1,0,1))
+
+arma11<-arima(serie_diff,c(1,0,1),include.mean=F)
 arma11$coef
 phi_1<-as.numeric(arma11$coef[1])
-phi_2<-as.numeric(arma11$coef[2])
+theta_1<-as.numeric(arma11$coef[2])
 sigma2<-as.numeric(arma11$sigma2)
 
 phi_1
-phi_2
+theta_1
 sigma2
+
+
+Sigma<-matrix(c(sigma2,(phi_1+theta_1)*sigma2,(phi_1+theta_1)*sigma2,(1+(phi_1+theta_1)^2)*sigma2),ncol=2)
+
+inv_Sigma<-solve(Sigma)
+
+par(mar=c(5, 5, 4, 2) + 0.1)
+plot(XT1, XT2, xlim=c(-10,10), ylim=c(-10,10), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
+
+# Calcul des bornes de la region de confiance
+conf <- ellipse(
+  x = XT1, y = XT2, level = 0.95, scale = c(sqrt(sigma2), sqrt(sigma2)), 
+  draw = TRUE, col = "red"
+)
+lines(conf, col="red")
