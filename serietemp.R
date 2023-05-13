@@ -264,10 +264,12 @@ estim <- arima(y,c(3,0,0)); arimafit(estim)
 # bien ajuste et pas valide
 
 estim <- arima(y,c(4,0,0)); arimafit(estim)
-ar4 <-estim
+# bien ajusté mais pas valide 
 
-# on a selectionne 3 modeles ar3, ma2 et arma21 valides et bien ajustes. On regarde les tests BIC et AIC pour selectionner le meilleur modele.
-models <- c("arma11","ar4","arma31"); names(models) <- models
+
+
+# on a selectionne 3 modeles arma11 et arma31 valides et bien ajustes. On regarde les tests BIC et AIC pour selectionner le meilleur modele.
+models <- c("arma11","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 #on regarde en 1 AIC et BIC cr??s pour comparer des modeles; ensuite on regarde le R
 #Si AIC et BIC selectionnent 2 modeles, ils restent deux modeles candidats que l'on departage par le R
@@ -276,6 +278,19 @@ apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 
 arima111<-arima(serie,c(1,1,1),include.mean=F)
 arima111
+
+adj_r2 <- function(model){
+  ss_res <- sum(model$residuals^2)
+  p <- model$arma[1]
+  q <- model$arma[2]
+  ss_tot <- sum(y[-c(1:max(p,q))]^2)
+  n <- model$nobs-max(p,q)
+  adj_r2 <- 1-(ss_res/(n-p-q-1))/(ss_tot/(n-1))
+  return(adj_r2)
+}
+adj_r2(arma11)
+adj_r2(arma31)
+# 
 
 ##### Partie3:Previsions #####
 
