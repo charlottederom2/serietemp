@@ -29,8 +29,12 @@ library(Hmisc)
 library(lmtest)
 library(margins)
 library(psych)
+library(base)
+require(base)
 
 rm(list=ls())
+
+
 ###### Partie 1 : Les donnees ######
 
 #Extraction des donnees : 
@@ -44,7 +48,6 @@ library(base)
 require(base)
 
 
-
 datafile <- "serietemp/patates.csv"
 data <- read.csv('patates_bisbis.csv',sep=";")
 
@@ -54,7 +57,7 @@ data <- read.csv('patates_bisbis.csv',sep=";")
 #### Q1 : Representation de la serie 
 
 dates_char <- as.character(data$dates)
-dates_char[1];dates_char[length(dates_char)] #affiche la premiere et la derni`ere date
+dates_char[1];dates_char[length(dates_char)] #affiche la premiere et la derniere date
 dates <- as.yearmon(seq(from=2005+1/12,to=2022+10/12,by=1/12)) #index des dates pour spread
 serie <- zoo(data$spread,order.by=dates)
 T <- length(serie)
@@ -164,6 +167,7 @@ pacf(s_centre,24)
 
 ###### Partie 2 : Modèles ARMA #######
 
+#### Q4 ####
 
 # On vérifie avec le test de LjungBox
 
@@ -178,39 +182,9 @@ Qtests <- function(series, k, fitdf=0) {
   
 }
 
-#tests de LB pour les ordres 1 a 24
-
-# L’absence d’autocorrelation n’est jamais rejetee a 95% jusqu’a 24 retards. Le modele est donc valide.
-# dans la fonction Qtestes: parametre numero 1: series
-# le test de Ljung-Box ne rejette pas l'absence d'autocorrelation des residus a l'ordre 6
-# matrice de pvals de k lignes et 1 colonnes: remplie de 1, pour chaque element on applique la fonction (if... on met NA, sinon ... quand on sort de la fonction on met return)
-#on trouve que pour 1 a 5: NA: le k est plus petit 
-#dans ce cas on veut accepter H0 (residus non correles) donc on veut des p-valeurs elevees: on est ravis ici
-
-
-
-#les coeff de l'ar3, on fait le ratio de 0.1748/0.1604 = 1.08 < 1.96 --> coef non significatif, on peut simplifier le modele
-#On teste tous les modeles pour trouver les modeles bien ajustes et valides, on les compare tous 
-
-
-
-summary(lm(serie ~ dates))
-#on fait une regression : les p-valeurs sont tres faibles, coef significatif au seuil de 1% (on le sait aussi car il y a 3 etoiles)
-#on fait le test de DF avec c et t : comme les deux coeff sont significatifs au seuil de 1% il sont non nuls donc on les inclus. 
-#deltaXt = c + bt + betaX(t-1) + somme(1?k) Phi(l)DeltaXt-l + Epsilon
-
-#install.packages("fUnitRoots")#tests de racine unitaire plus modulables
-#library(fUnitRoots)
-
-
-
-
-#### Q4 ####
 #on cree une fonction pour automatiser le calcul de ratios
 #fonction de test des significations individuelles des coefficients
-#on recupere les coeffs
-#"on recupere les std errors"
-#"on calcule le ratio"
+
 signif <- function(estim){ 
   coef <- estim$coef 
   se <- sqrt(diag(estim$var.coef))
@@ -219,7 +193,6 @@ signif <- function(estim){
   return(rbind(coef,se,pval))
 }
 
-##
 arimafit <- function(estim){
   adjust <- round(signif(estim),3)
   pvals <- Qtests(estim$residuals,24,length(estim$coef)-1)
@@ -240,15 +213,13 @@ estim <- arima(y,c(4,0,1)); arimafit(estim)
 
 estim <- arima(y,c(3,0,1)); arimafit(estim)
 arma31 <- estim
-#OK 
+#bien ajuste et valide ##OK
 
-estim <- arima(y,c(2,0,1)); 
-arimafit(estim)
+estim <- arima(y,c(2,0,1)); arimafit(estim)
 #pas bien ajusté 
 
-estim <- arima(y,c(1,0,1)); 
-arimafit(estim)
-#valide et bien ajuste 
+estim <- arima(y,c(1,0,1)); arimafit(estim)
+#bien ajuste et valide ##OK
 arma11 <- estim
 
 estim <- arima(y,c(0,0,1)); arimafit(estim)
@@ -267,18 +238,13 @@ estim <- arima(y,c(4,0,0)); arimafit(estim)
 # bien ajusté mais pas valide 
 
 
-
-# on a selectionne 3 modeles arma11 et arma31 valides et bien ajustes. On regarde les tests BIC et AIC pour selectionner le meilleur modele.
+# on a selectionne 2 modeles arma11 et arma31 valides et bien ajustes. On regarde les tests BIC et AIC pour selectionner le meilleur modele.
 models <- c("arma11","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
-#on regarde en 1 AIC et BIC cr??s pour comparer des modeles; ensuite on regarde le R
-#Si AIC et BIC selectionnent 2 modeles, ils restent deux modeles candidats que l'on departage par le R
 
-#on prend le arma11 car plus petits AIC et BIC. on regarde ensuite R pour confirmer notre intuition
+#Si AIC et BIC selectionnent les 2 modèles, ils restent deux modeles candidats que l'on departage par le R
 
-arima111<-arima(serie,c(1,1,1),include.mean=F)
-arima111
-
+#Calcul du R^2 ajusté
 adj_r2 <- function(model){
   ss_res <- sum(model$residuals^2)
   p <- model$arma[1]
@@ -290,7 +256,7 @@ adj_r2 <- function(model){
 }
 adj_r2(arma11)
 adj_r2(arma31)
-# 
+
 
 ##### Partie3:Previsions #####
 
