@@ -30,7 +30,7 @@ library(lmtest)
 library(margins)
 library(psych)
 
-
+rm(list=ls())
 ###### Partie 1 : Les donnees ######
 
 #Extraction des donnees : 
@@ -39,15 +39,41 @@ setwd(path)
 
 #Mise en forme : 
 datafile <- "serietemp/patates.csv"
-data <- read.csv('patates.csv',sep=";")
+data <- read.csv('patates_bisbis.csv',sep=";")
 
-data <- data.source[1:(T-4)] #supprime les 4 derni`eres valeurs
+require(zoo)
+require(tseries)
+library(base)
+require(base)
+
+data.source <- zoo(data[[1]], order.by=data$dates) #convertit le 1er element de data en "zoo"
+T <- length(data.source)
+data <- data.source[1:(length(data.source)-4)] #supprime les 4 dernieres valeurs
+data_df <- data.frame(date = as.Date(index(data.source), format = "%Y-%m"), spread = coredata(data.source))
+
+dates_char <- as.character(data_df$date)
+is.unique(data_df$date)
+
+data_df$date <- as.Date(data_df$date, format="%Y-%m") # changer le format de la date
+data_df_unique <- data_df[!duplicated(data_df$date),]
+data_df_unique$spread <- as.numeric(data_df_unique$spread)
+
+plot(serie, xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice")
+
+serie_diff <- diff(serie, 1)
+
+plot(cbind(serie, serie_diff), xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice et différences premières")
+
+plot(serie, xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice")
+
+serie_diff <- diff(serie, 1)
+plot(cbind(serie, serie_diff), xlab = "Dates", ylab = "Indice de production industrielle", main = "Indice et différences premières")
 
 ### Q1 : Representation de la serie 
 dates_char <- as.character(data$dates)
 dates_char[1];dates_char[length(dates_char)] #affiche la premi`ere et la derni`ere date
-dates <- as.yearmon(seq(from=2006+3/12,to=2023+1/12,by=1/12)) #index des dates pour spread
-serie <- zoo(data$spread,order.by=dates)
+dates <- as.yearmon(seq(from=2005+2/12,to=2022+10/12,by=1/12)) #index des dates pour spread
+serie <- zoo(data,order.by=dates)
 serie_diff <- diff(data$spread,1) #difference premiere
 plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
