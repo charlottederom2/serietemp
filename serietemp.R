@@ -145,9 +145,6 @@ pp.test(serie_diff) #Idem
 kpss.test(serie_diff,null="Trend") 
 #On ne rejette pas H0 (= Est stationnaire)
 
-#Enlever la moyenne
-mean(serie_diff)
-s_centre <- serie_diff - mean(serie_diff)
 
 #représentation des deux séries
 plot(cbind(serie,serie_diff),main="Representation des deux series") 
@@ -204,9 +201,7 @@ arimafit <- function(estim){
   print(pvals)
 }
 
-
-
-y<- s_centre
+y<- serie_diff
 
 estim <- arima(y,c(4,0,1)); arimafit(estim)
 #pas bien ajuste
@@ -257,6 +252,11 @@ adj_r2 <- function(model){
 adj_r2(arma11)
 adj_r2(arma31)
 
+#### Q5 ####
+arima311<-arima(serie,c(3,1,1),include.mean=F)
+arima311
+
+
 
 ##### Partie3:Previsions #####
 
@@ -270,17 +270,38 @@ x<-seq(-10,10)
 y<-dnorm(x,mu,sigma)
 lines(x,y,lwd=0.5,col="blue")
 
+#extraction des coefficients du modèle pour vérifier les racines des polynomes phi et theta
+arma31$coef
+
+# Obtention des coefficients AR et MA
+phi <- coef(arma31)[1:3]
+theta <- coef(arma31)[4]
+
+# Calcul des racines du polynome AR
+ar_roots <- polyroot(c(1, -phi))
+
+# Calcul des racines du polynome MA
+ma_roots <- polyroot(c(1, theta))
+
+# Affichage des racines et de leur module
+print(ar_roots)
+Mod(ar_roots)
+
+print(ma_roots)
+
+#les racines ont toutes un module supérieur à 1, elles sont toutes en dehors du cercle unité
+
 ### Question 8 : Traçons la région de confiance pour la serie à 95%
 
 library(forecast)
-fore=forecast(arima111,h=4,level=95)
+fore=forecast(arima311,h=4,level=95) #h correspond au nombre de valeurs à prédire
 par(mfrow=c(1,1))
-plot(fore,col=1,fcol=2,xlim=c(2020,2025),shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(1,1,1) avec une moyenne nulle")
+plot(fore,col=1,fcol=2,xlim=c(2020,2024),shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(3,1,1)")
 
-#Ensuite,on represente laregion de confiance bivariee a 95% .require(ellipse)
+#On peut représenter la region de confiance bivariee a 95% avec une ellipse
 
-XT1=predict(arma11,n.ahead=2)$pred[1]
-XT2=predict(arma11,n.ahead=2)$pred[2]
+XT1=predict(arma31,n.ahead=2)$pred[1]
+XT2=predict(arma31,n.ahead=2)$pred[2]
 XT1
 XT2
 
@@ -288,30 +309,26 @@ require(ellipsis)
 require(car)
 require(ellipse)
 library(ellipse)
-arma=arima0(serie_diff,order=c(1,0,1))
+arma=arima0(serie_diff,order=c(3,0,1))
 
-arma11<-arima(serie_diff,c(1,0,1),include.mean=F)
-arma11$coef
-phi_1<-as.numeric(arma11$coef[1])
-theta_1<-as.numeric(arma11$coef[2])
+arma11<-arima(serie_diff,c(3,0,1),include.mean=F)
+
+#on a déjà extrait les coefficients de l'ARMA31 dans phi et theta
 sigma2<-as.numeric(arma11$sigma2)
-
-phi_1
-theta_1
+phi
+theta
 sigma2
 
 
-Sigma<-matrix(c(sigma2,(phi_1+theta_1)*sigma2,(phi_1+theta_1)*sigma2,(1+(phi_1+theta_1)^2)*sigma2),ncol=2)
+Sigma<-matrix(c(sigma2,(phi[1]+theta[1])*sigma2,(phi[1]+theta[1])*sigma2,(1+(phi[1]+theta[1])^2)*sigma2),ncol=2)
 
 inv_Sigma<-solve(Sigma)
 
 
 par(mar=c(5, 5, 4, 2) + 0.1)
-plot(XT1, XT2, xlim=c(-20,20), ylim=c(-20,20), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
+plot(XT1, XT2, xlim=c(-17,15), ylim=c(-22,20), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
 
 # Calcul des bornes de la region de confiance
-conf <- ellipse(
-  x = XT1, y = XT2, level = 0.95, scale = c(sqrt(sigma2), sqrt(sigma2)), 
-  draw = TRUE, col = "red"
-)
+conf <- ellipse(x = XT1, y = XT2, level = 0.95, scale = c(sqrt(sigma2), sqrt(sigma2)), draw = TRUE,center = c(XT1, XT2), col = "red")
 lines(conf, col="red")
+
