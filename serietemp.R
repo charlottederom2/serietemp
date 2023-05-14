@@ -98,8 +98,6 @@ Qtests <- function(series, k, fitdf=0) {
   return(t(pvals))
 }
 
-Qtests(adf@test$lm$residuals24,length(adf@test$lm$coefficients))
-
 adfTest_valid <- function(series,kmax,type){ #tests ADF jusqu’`a des r´esidus non autocorr´el´es
   k <- 0
   noautocorr <- 0
@@ -153,14 +151,6 @@ acf(as.numeric(serie_diff) , main="ACF de s_diff")
 pacf(as.numeric(serie_diff), main = "PACF de s_diff")
 #les ordres maximaux sont p*=4 et q* = 1
 
-par(mfrow = c(1,2))
-
-acf(s_centre,24);
-pacf(s_centre,24)
-
-# statio centré donc on peut mettre ARMA
-# ARMA d'ordres 4,1 à vérifier 
-
 
 ###### Partie 2 : Modèles ARMA #######
 
@@ -201,13 +191,14 @@ arimafit <- function(estim){
   print(pvals)
 }
 
-y<- serie_diff
+y<-serie_diff
 
 estim <- arima(y,c(4,0,1)); arimafit(estim)
 #pas bien ajuste
 
 estim <- arima(y,c(3,0,1)); arimafit(estim)
-arma31 <- estim
+estim
+arma31 <- arima(y,c(3,0,1),include.mean = F)
 #bien ajuste et valide ##OK
 
 estim <- arima(y,c(2,0,1)); arimafit(estim)
@@ -262,21 +253,21 @@ arima311
 
 #### Question 6
 
-plot(density(arma11$residuals,lwd=0.5),xlim=c(-10,10),main="Densite des residus",xlab="Valeurs",ylab="Densite")
+plot(density(arma31$residuals,lwd=0.5),xlim=c(-10,10),main="Densite des residus",xlab="Valeurs",ylab="Densite")
 
-mu<-mean(arma11$residuals)
-sigma<-sd(arma11$residuals)
+mu<-mean(arma31$residuals)
+sigma<-sd(arma31$residuals)
 x<-seq(-10,10)
 y<-dnorm(x,mu,sigma)
 lines(x,y,lwd=0.5,col="blue")
 
 #extraction des coefficients du modèle pour vérifier les racines des polynomes phi et theta
 arma31$coef
-
+arma31
 # Obtention des coefficients AR et MA
 phi <- coef(arma31)[1:3]
 theta <- coef(arma31)[4]
-
+arima311
 # Calcul des racines du polynome AR
 ar_roots <- polyroot(c(1, -phi))
 
@@ -311,24 +302,21 @@ require(ellipse)
 library(ellipse)
 arma=arima0(serie_diff,order=c(3,0,1))
 
-arma11<-arima(serie_diff,c(3,0,1),include.mean=F)
+arma31<-arima(serie_diff,c(3,0,1),include.mean=F)
 
 #on a déjà extrait les coefficients de l'ARMA31 dans phi et theta
-sigma2<-as.numeric(arma11$sigma2)
+sigma2<-as.numeric(arma31$sigma2)
+sigma2
 phi
 theta
-sigma2
-
 
 Sigma<-matrix(c(sigma2,(phi[1]+theta[1])*sigma2,(phi[1]+theta[1])*sigma2,(1+(phi[1]+theta[1])^2)*sigma2),ncol=2)
-
+Sigma
 inv_Sigma<-solve(Sigma)
 
 
-par(mar=c(5, 5, 4, 2) + 0.1)
-plot(XT1, XT2, xlim=c(-17,15), ylim=c(-22,20), xlab="PrevisiondeX(T+1)", ylab="PrevisiondeX(T+2)", main="Regiondeconfiancebivariee 95%")
+plot(XT1,XT2,xlim=c(-17,15),ylim=c(-19,17),xlab="Prevision de X(T+1)",ylab="Prevision de X(T+2)",main="Region de confiance bivariee a 95%")
 
-# Calcul des bornes de la region de confiance
-conf <- ellipse(x = XT1, y = XT2, level = 0.95, scale = c(sqrt(sigma2), sqrt(sigma2)), draw = TRUE,center = c(XT1, XT2), col = "red")
-lines(conf, col="red")
+lines(ellipse(Sigma,centre=c(XT1,XT2)),type="l",col="red",xlab="Xt+1",ylab="Xt+2",main="Ellipse de confiance pour(Xt+1,Xt+2)")
+abline(h=XT1,v=XT2)
 
