@@ -58,12 +58,11 @@ data <- read.csv('patates_bisbis.csv',sep=";")
 
 dates_char <- as.character(data$dates)
 dates_char[1];dates_char[length(dates_char)] #affiche la premiere et la derniere date
-dates <- as.yearmon(seq(from=2005+1/12,to=2022+10/12,by=1/12)) #index des dates pour spread
+dates <- as.yearmon(seq(from=2023+2/12,to=2005,by=-1/12)) #index des dates pour spread
 serie <- zoo(data$spread,order.by=dates)
 T <- length(serie)
-test <- serie[(T-3):T]
-data <- serie[1:(T-4)]
 
+data <- serie[1:(T-4)]
 serie_diff <- diff(serie,1) #difference premiere
 plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
@@ -117,7 +116,7 @@ adfTest_valid <- function(series,kmax,type){ #tests ADF jusqu’`a des r´esidus
 }
 adf <- adfTest_valid(serie,24,"ct")
 adf
-#la racine unitaire est rejetée au seuil de 1%
+#l'hypothèse de racine unitaire n'est pas rejetée
 
 
 ## Philippe perron
@@ -139,7 +138,7 @@ summary(lm(serie_diff~dates[-1])) #on enlève la première date car la série es
 #on trouve a nouveau une série avec tendance et constante non nulles (les deux coefficients sont significatifs)
 
 #test de stationnarité (H0: n'est pas stationnaire ; H1: statio)
-adf <- adfTest_valid(serie_diff,24,"ct")
+adf <- adfTest_valid(serie_diff,24,"nc")
 adf #On rejette H0 sur tous les niveaux de confiance usuels 
 
 pp.test(serie_diff) #Idem
@@ -147,6 +146,7 @@ kpss.test(serie_diff,null="Trend")
 #On ne rejette pas H0 (= Est stationnaire)
 
 #Enlever la moyenne
+mean(serie_diff)
 s_centre <- serie_diff - mean(serie_diff)
 
 #représentation des deux séries
@@ -242,9 +242,9 @@ estim <- arima(y,c(4,0,0)); arimafit(estim)
 models <- c("arma11","arma31"); names(models) <- models
 apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 
-#Si AIC et BIC selectionnent les 2 modèles, ils restent deux modeles candidats que l'on departage par le R
+#AIC et BIC selectionnent chacun un modele different, il reste deux modeles candidats que l'on departage par le R
 
-#Calcul du R^2 ajusté
+#Calcul du R^2 ajuste
 adj_r2 <- function(model){
   ss_res <- sum(model$residuals^2)
   p <- model$arma[1]
