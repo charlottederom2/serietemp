@@ -31,6 +31,9 @@ library(margins)
 library(psych)
 library(base)
 require(base)
+require(tseries)
+library(base)
+require(base)
 
 rm(list=ls())
 
@@ -38,49 +41,32 @@ rm(list=ls())
 ###### Partie 1 : Les donnees ######
 
 #Extraction des donnees : 
-path <- "C:/Users/berti/Documents/ENSAE - 2A/Time series" 
-setwd(path) 
-
-
-require(zoo)
-require(tseries)
-library(base)
-require(base)
-
-
 datafile <- "serietemp/patates.csv"
 data <- read.csv('patates_bisbis.csv',sep=";")
 
-#data <- data.source[1:(T-4)] #supprime les 4 dernieres valeurs
-
-
-#### Q1 : Representation de la serie 
-
+#mise en forme des donnees
 dates_char <- as.character(data$dates)
 dates_char[1];dates_char[length(dates_char)] #affiche la premiere et la derniere date
-dates <- as.yearmon(seq(from=2023+2/12,to=2005,by=-1/12)) #index des dates pour spread
+dates <- as.yearmon(seq(from=2023+2/12,to=2005,by=-1/12)) #index des dates pour l'indice (colonne nommee 'spread' dans le csv)
 serie <- zoo(data$spread,order.by=dates)
 T <- length(serie)
-
-data <- serie[1:(T-4)]
+data <- serie[1:(T-4)] #on enlève les quatre dernieres valeurs pour effectuer la prediction finale
 serie_diff <- diff(serie,1) #difference premiere
-plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")
 
-plot(cbind(serie,serie_diff))
+#### Q1 : Representation de la serie 
+plot(serie,xlab="Dates",ylab="Indice de production industrielle",main="Indice")#on represente la serie
 
-monthplot(serie)
-
-acf(serie)
-pacf(serie)
+plot(cbind(serie,serie_diff)) #on represente la serie et la serie differenciee pour avoir une idee
 
 fit1<-decompose(serie)
-plot(fit1)
+plot(fit1)#on represente la serie decomposee
 
 #2 
 
 summary(lm(serie~dates))
 #regression lineaire simple de la serie chronologique s en fonction de sa position temporelle seq(1,n)
 #calcul des coefficients de regression et des statistiques associees a cette relation lineaire
+#on voit que les coefficients associes a la tendance et a la constante sont significativement non nuls
 
 
 
@@ -114,7 +100,7 @@ adfTest_valid <- function(series,kmax,type){ #tests ADF jusqu’`a des r´esidus
 }
 adf <- adfTest_valid(serie,24,"ct")
 adf
-#l'hypothèse de racine unitaire n'est pas rejetée
+#l'hypothese de racine unitaire n'est pas rejetee
 
 
 ## Philippe perron
@@ -129,36 +115,36 @@ kpss.test(serie,null="Trend") #prend en compte à la fois une tendance et une co
 
 
 #### Q2 #### Stationnariser la serie
-serie_diff <- diff(serie)
-plot(serie_diff, xaxt="s", type = "l")
+serie_diff <- diff(serie) #on differencie notre serie
+plot(serie_diff, xaxt="s", type = "l") #
 
-summary(lm(serie_diff~dates[-1])) #on enlève la première date car la série est différenciée
-#on trouve a nouveau une série avec tendance et constante non nulles (les deux coefficients sont significatifs)
+summary(lm(serie_diff~dates[-1])) #on enleve la première date car la série est differenciee
+#on trouve une serie avec tendance et constante nulles
 
-#test de stationnarité (H0: n'est pas stationnaire ; H1: statio)
+#test de stationnarite (H0: n'est pas stationnaire ; H1: statio)
 adf <- adfTest_valid(serie_diff,24,"nc")
 adf #On rejette H0 sur tous les niveaux de confiance usuels 
 
 pp.test(serie_diff) #Idem
-kpss.test(serie_diff,null="Trend") 
-#On ne rejette pas H0 (= Est stationnaire)
 
+kpss.test(serie_diff,null="Trend") #On ne rejette pas H0 (= Est stationnaire)
 
-#représentation des deux séries
+#### Q3 #### représentation de la serie brute et de la serie differenciee
 plot(cbind(serie,serie_diff),main="Representation des deux series") 
-
-acf(as.numeric(serie_diff) , main="ACF de s_diff")
-pacf(as.numeric(serie_diff), main = "PACF de s_diff")
-#les ordres maximaux sont p*=4 et q* = 1
 
 
 ###### Partie 2 : Modèles ARMA #######
 
 #### Q4 ####
 
+#PACF et ACF pour avoir les ordres maximaux de p et q
+acf(as.numeric(serie_diff) , main="ACF de s_diff")
+pacf(as.numeric(serie_diff), main = "PACF de s_diff")
+#les ordres maximaux sont p*=4 et q* = 1
+
 # On vérifie avec le test de LjungBox
 
-# Validation du modèle
+# Validation du modele
 
 Qtests <- function(series, k, fitdf=0) {
   pvals <- apply(matrix(1:k), 1, FUN=function(l) {
@@ -169,7 +155,7 @@ Qtests <- function(series, k, fitdf=0) {
   
 }
 
-#on cree une fonction pour automatiser le calcul de ratios
+#on utilise une fonction pour automatiser le calcul de ratios
 #fonction de test des significations individuelles des coefficients
 
 signif <- function(estim){ 
@@ -243,6 +229,9 @@ adj_r2 <- function(model){
 adj_r2(arma11)
 adj_r2(arma31)
 
+#on selectionne le arma31 avec le plus grand R^2
+
+
 #### Q5 ####
 arima311<-arima(serie,c(3,1,1),include.mean=F)
 arima311
@@ -251,30 +240,36 @@ arima311
 
 ##### Partie3:Previsions #####
 
-#### Question 6
+#### Question 7 #### on teste les hypotheses qui nous ont permis de trouver une region de confiance
 
+####hypothese sur les residus:
+
+#on represente la densite de nos residus
 plot(density(arma31$residuals,lwd=0.5),xlim=c(-10,10),main="Densite des residus",xlab="Valeurs",ylab="Densite")
 
+#on represente une gaussienne de meme moyenne et variance que nos residus
 mu<-mean(arma31$residuals)
 sigma<-sd(arma31$residuals)
 x<-seq(-10,10)
 y<-dnorm(x,mu,sigma)
 lines(x,y,lwd=0.5,col="blue")
 
-#extraction des coefficients du modèle pour vérifier les racines des polynomes phi et theta
+####hypothese sur le modele:
+
+#extraction des coefficients du modele pour verifier les racines des polynomes phi et theta de l'arma31
 arma31$coef
-arma31
+
 # Obtention des coefficients AR et MA
 phi <- coef(arma31)[1:3]
 theta <- coef(arma31)[4]
-arima311
+
 # Calcul des racines du polynome AR
 ar_roots <- polyroot(c(1, -phi))
 
 # Calcul des racines du polynome MA
 ma_roots <- polyroot(c(1, theta))
 
-# Affichage des racines et de leur module
+# Affichage des racines et de leur module : les racines sont bien en dehors du cercle unite
 print(ar_roots)
 Mod(ar_roots)
 
@@ -282,14 +277,17 @@ print(ma_roots)
 
 #les racines ont toutes un module supérieur à 1, elles sont toutes en dehors du cercle unité
 
-### Question 8 : Traçons la région de confiance pour la serie à 95%
+
+#### Question 8 : representation de la region de confiance
+
+#On trace la région de confiance pour la serie a 95%
 
 library(forecast)
-fore=forecast(arima311,h=4,level=95) #h correspond au nombre de valeurs à prédire
+fore=forecast(arima311,h=4,level=95) #h correspond au nombre de valeurs a predire, ici h=4 comme le nombre retire au debut
 par(mfrow=c(1,1))
 plot(fore,col=1,fcol=2,xlim=c(2020,2024),shaded=TRUE,xlab="Temps",ylab="Valeur",main="Prevision pour un ARIMA(3,1,1)")
 
-#On peut représenter la region de confiance bivariee a 95% avec une ellipse
+#On peut representer la region de confiance bivariee a 95% avec une ellipse
 
 XT1=predict(arma31,n.ahead=2)$pred[1]
 XT2=predict(arma31,n.ahead=2)$pred[2]
